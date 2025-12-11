@@ -1,0 +1,29 @@
+services:
+  # --- Traefik Service (Reverse Proxy) ---
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--api.insecure=true"             # เปิด Dashboard (ห้ามใช้ใน Prod จริง ให้ปิดหรือใส่ Auth)
+      - "--providers.docker=true"         # ให้ Traefik อ่านค่าจาก Docker
+      - "--providers.docker.exposedbydefault=false" # ไม่เปิดเผย Container อื่นถ้าไม่สั่ง
+      - "--entrypoints.web.address=:80"   # รับ HTTP Port 80
+    ports:
+      - "80:80"     # Web Traffic
+      - "8080:8080" # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # จำเป็น: เพื่อให้ Traefik คุยกับ Docker ได้
+
+  # --- Vue App Service ---
+  vue-app:
+    build: .
+    container_name: my-vue-app
+    labels:
+      - "traefik.enable=true" # บอก Traefik ว่าให้จัดการ Container นี้
+      
+      # Routers: กำหนด Domain (ใช้ vue.localhost เพื่อเทสในเครื่องได้เลย)
+      - "traefik.http.routers.vue-app.rule=Host(`vue.localhost`)"
+      - "traefik.http.routers.vue-app.entrypoints=web"
+      
+      # Services: บอก Port ภายในของ Container (Nginx เปิด Port 3000 ไว้)
+      - "traefik.http.services.vue-app.loadbalancer.server.port=3000"

@@ -1,0 +1,13 @@
+# ไฟล์นี้จะถูก merge กับ docker-compose.yml อัตโนมัติตอนรัน docker-compose up
+# ใช้สำหรับ development เท่านั้น (ไม่ต้อง commit ขึ้น git ถ้าไม่ต้องการ)
+
+services:
+  traefik:
+    command:
+      - "--api.insecure=true"  # เปิด Dashboard สำหรับ dev
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "8080:8080"  # Traefik Dashboard
+

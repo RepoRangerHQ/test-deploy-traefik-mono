@@ -1,0 +1,54 @@
+services:
+  # --- Traefik Service (Reverse Proxy) ---
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--api.insecure=true"             # เปิด Dashboard (ห้ามใช้ใน Prod)
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080" # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-network
+
+  # --- Frontend (Vue.js) ---
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://api.localhost
+    container_name: vue-frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=app-network"
+      # Route: vue.localhost
+      - "traefik.http.routers.frontend.rule=Host(`vue.localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    networks:
+      - app-network
+
+  # --- Backend (Hono API) ---
+  backend:
+    build: ./backend
+    container_name: hono-backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=app-network"
+      # Route: api.localhost
+      - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=4000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: app-network
+    driver: bridge
+
